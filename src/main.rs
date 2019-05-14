@@ -54,22 +54,21 @@ fn main() -> Result<(), Error> {
         if button_down_pin.is_high() {
             direction = Direction::Down;
         }
-        match direction {
+        let (start, fin) = match direction {
             Direction::NoDirection => {
                 thread::sleep(Duration::from_millis(1));
                 continue;
             },
-            Direction::Up => {
-                for step in HALFSTEP_SEQ.iter() {
-                    move_motor(&mut motor_pins, *step)
-                }
-            },
-            Direction::Down => {
-                for step in HALFSTEP_SEQ.iter().rev() {
-                    move_motor(&mut motor_pins, *step)
-                }
-            },
+            Direction::Up => (0, HALFSTEP_SEQ.len() -1),
+            Direction::Down => (HALFSTEP_SEQ.len() -1, 0),
         };
+        for i in start..fin {
+            let step = HALFSTEP_SEQ[i];
+            for (pin_index, level) in step.iter().enumerate() {
+                motor_pins[pin_index].write(*level);
+            }
+            thread::sleep(Duration::from_millis(1));
+        }
     }
 }
 
@@ -82,11 +81,4 @@ fn create_motor_pins(gpio: &Gpio) -> Result<Vec<OutputPin>, Error> {
         }
     }
     return Ok(pins);
-}
-
-fn move_motor(motor_pins: &mut Vec<OutputPin>, step: [Level; 4]) {
-    for (pin_index, level) in step.iter().enumerate() {
-        motor_pins[pin_index].write(*level);
-    }
-    thread::sleep(Duration::from_millis(1));
 }
