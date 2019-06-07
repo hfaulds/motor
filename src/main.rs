@@ -3,6 +3,7 @@ use std::time::Duration;
 
 use rppal::gpio::Error;
 use rppal::gpio::Gpio;
+use rppal::gpio::InputPin;
 use rppal::gpio::Level;
 use rppal::gpio::OutputPin;
 
@@ -47,16 +48,10 @@ fn main() -> Result<(), Error> {
     };
 
     loop {
-        let mut direction = Direction::NoDirection;
-        if button_up_pin.is_high() {
-            direction = Direction::Up;
-        }
-        if button_down_pin.is_high() {
-            direction = Direction::Down;
-        }
+        let direction = get_movement_direction(&button_up_pin, &button_down_pin);
         match direction {
             Direction::NoDirection => {
-                thread::sleep(Duration::from_millis(1));
+                thread::sleep(Duration::from_millis(10));
                 continue;
             },
             Direction::Up => {
@@ -70,6 +65,7 @@ fn main() -> Result<(), Error> {
                 }
             },
         };
+        thread::sleep(Duration::from_millis(1));
     }
 }
 
@@ -82,6 +78,14 @@ fn create_motor_pins(gpio: &Gpio) -> Result<Vec<OutputPin>, Error> {
         }
     }
     return Ok(pins);
+}
+
+fn get_movement_direction(button_up_pin: &InputPin, button_down_pin: &InputPin) -> Direction {
+    match (button_up_pin.is_high(), button_down_pin.is_high()) {
+        (true, false) => Direction::Up,
+        (false, true) => Direction::Down,
+        _  => Direction::NoDirection,
+    }
 }
 
 fn move_motor(motor_pins: &mut Vec<OutputPin>, step: [Level; 4]) {
